@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -31,7 +31,7 @@
         }
 
         .page {
-            width: 33.333%;
+            width: 25%;
             height: 100vh;
             overflow-y: auto;
             padding: 10px;
@@ -514,7 +514,42 @@
     <!-- 页面容器 -->
     <div class="pages-wrapper" id="pagesWrapper">
         
-        <!-- 第1页：贷款流程 -->
+        <!-- 第1页：待办事项 -->
+        <div class="page" id="page-todo">
+            <div class="container">
+                <div class="card">
+                    <h2>📋 待办事项</h2>
+                    <div class="todo-input-wrapper">
+                        <input type="text" id="todoInput" placeholder="输入待办事项，按回车添加" onkeypress="handleTodoKeypress(event)">
+                        <button class="btn btn-primary" onclick="addTodoItem()">添加</button>
+                    </div>
+                    <div class="todo-list" id="todoList">
+                        <!-- 待办项将在这里动态生成 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 第2页：备忘录 -->
+        <div class="page" id="page-memo">
+            <div class="container">
+                <div class="card">
+                    <h2>📝 备忘录</h2>
+                    <div class="todo-input-wrapper">
+                        <input type="text" id="memoInput" placeholder="输入备忘内容，按回车添加" onkeypress="if(event.key==='Enter')addMemoItem()">
+                        <button class="btn btn-primary" onclick="addMemoItem()">添加</button>
+                    </div>
+                    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+                        <button class="btn btn-sm" style="background:#e3f2fd;color:#1565c0;flex:1;" onclick="filterMemo('all')" id="memoFilterAll">全部</button>
+                        <button class="btn btn-sm" style="background:#fff3e0;color:#e65100;flex:1;" onclick="filterMemo('important')" id="memoFilterImportant">⚠️ 重要</button>
+                        <button class="btn btn-sm" style="background:#e8f5e9;color:#2e7d32;flex:1;" onclick="filterMemo('normal')" id="memoFilterNormal">普通</button>
+                    </div>
+                    <div class="todo-list" id="memoList"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 第3页：贷款流程 -->
         <div class="page" id="page-loan">
             <div class="container">
                 
@@ -548,23 +583,7 @@
             </div>
         </div>
 
-        <!-- 第2页：待办事项 -->
-        <div class="page" id="page-todo">
-            <div class="container">
-                <div class="card">
-                    <h2>📋 待办事项</h2>
-                    <div class="todo-input-wrapper">
-                        <input type="text" id="todoInput" placeholder="输入待办事项，按回车添加" onkeypress="handleTodoKeypress(event)">
-                        <button class="btn btn-primary" onclick="addTodoItem()">添加</button>
-                    </div>
-                    <div class="todo-list" id="todoList">
-                        <!-- 待办项将在这里动态生成 -->
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 第3页：清单文件 -->
+        <!-- 第4页：清单文件 -->
         <div class="page" id="page-files">
             <div class="container">
                 <div class="card">
@@ -583,16 +602,20 @@
     <!-- 底部导航 -->
     <div class="bottom-nav">
         <div class="nav-item active" onclick="switchPage(0)">
-            <div class="nav-icon">📊</div>
-            <div class="nav-label">贷款流程</div>
+            <div class="nav-icon">📋</div>
+            <div class="nav-label">待办</div>
         </div>
         <div class="nav-item" onclick="switchPage(1)">
-            <div class="nav-icon">📋</div>
-            <div class="nav-label">待办事项</div>
+            <div class="nav-icon">📝</div>
+            <div class="nav-label">备忘</div>
         </div>
         <div class="nav-item" onclick="switchPage(2)">
+            <div class="nav-icon">📊</div>
+            <div class="nav-label">流程</div>
+        </div>
+        <div class="nav-item" onclick="switchPage(3)">
             <div class="nav-icon">📁</div>
-            <div class="nav-label">清单文件</div>
+            <div class="nav-label">清单</div>
         </div>
     </div>
 
@@ -910,6 +933,7 @@ const filesData = [
 let clients = {};
 let currentClientId = null;
 let currentTodoClientId = null;
+let currentMemoClientId = null;
 let todos = {};  // { clientId: [{id, text, completed}] }
 let hasUnsavedChanges = false;
 let currentPage = 0;
@@ -933,6 +957,7 @@ function init() {
         todos[currentClientId] = [];
     }
     currentTodoClientId = currentClientId;
+    currentMemoClientId = currentClientId;
     
     renderClientSelect();
     renderAll();
@@ -944,7 +969,7 @@ function init() {
 // ========== 页面切换 ==========
 function switchPage(pageIndex) {
     currentPage = pageIndex;
-    document.getElementById('pagesWrapper').style.transform = `translateX(-${pageIndex * 33.333}%)`;
+    document.getElementById('pagesWrapper').style.transform = `translateX(-${pageIndex * 25}%)`;
     
     // 更新导航栏状态
     document.querySelectorAll('.nav-item').forEach((item, index) => {
@@ -978,6 +1003,7 @@ function switchClient(id) {
     renderClientSelect();
     renderAll();
     renderTodoList();
+    renderMemoList();
     updateProgress();
 }
 
@@ -1006,6 +1032,7 @@ function addClient() {
     renderClientSelect();
     renderAll();
     renderTodoList();
+    renderMemoList();
     updateProgress();
 }
 
@@ -1042,12 +1069,14 @@ function deleteClient(id) {
         const remaining = Object.keys(clients);
         currentClientId = remaining.length > 0 ? remaining[0] : null;
         currentTodoClientId = currentClientId;
+    currentMemoClientId = currentClientId;
     }
     saveAll();
     hideMgmtModal();
     renderClientSelect();
     renderAll();
     renderTodoList();
+    renderMemoList();
     updateProgress();
 }
 
@@ -1276,6 +1305,72 @@ function deleteTodo(index) {
     hasUnsavedChanges = true;
     renderTodoList();
     showSaveBtn();
+}
+
+// ========== 备忘录功能 ==========
+let memos = JSON.parse(localStorage.getItem('memos') || '[]');
+let memoFilter = 'all';
+
+function renderMemoList() {
+    const listEl = document.getElementById('memoList');
+    const clientMemos = memos[currentMemoClientId] || [];
+    const filtered = memoFilter === 'all' ? clientMemos : clientMemos.filter(m => m.level === memoFilter);
+    
+    if (filtered.length === 0) {
+        listEl.innerHTML = '<div class="empty-state">📝 暂无备忘记录<br><br>在上方输入框添加备忘</div>';
+        return;
+    }
+    
+    let html = '';
+    filtered.forEach((memo) => {
+        const levelTag = memo.level === 'important' ? '<span style="color:#e65100;font-size:11px;margin-left:6px;">⚠️重要</span>' : '';
+        const timeStr = new Date(memo.id).toLocaleString('zh-CN', {month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
+        html += `<div class="todo-item" style="flex-direction:column;align-items:flex-start;">`;
+        html += `<div style="display:flex;justify-content:space-between;width:100%;align-items:center;">`;
+        html += `<span class="todo-text" style="flex:1;">${escHtml(memo.text)}${levelTag}</span>`;
+        html += `<div style="display:flex;gap:4px;">`;
+        html += `<button class="todo-delete" style="color:#1565c0;background:#e3f2fd;" onclick="toggleMemoLevel('${memo.id}')">${memo.level==='important'?'取消重要':'标重要'}</button>`;
+        html += `<button class="todo-delete" onclick="deleteMemo('${memo.id}')">删除</button>`;
+        html += `</div></div>`;
+        html += `<div style="font-size:11px;color:#999;margin-top:4px;">${timeStr}</div>`;
+        html += `</div>`;
+    });
+    listEl.innerHTML = html;
+}
+
+function addMemoItem() {
+    const input = document.getElementById('memoInput');
+    const text = input.value.trim();
+    if (!text) return;
+    if (!memos[currentMemoClientId]) memos[currentMemoClientId] = [];
+    memos[currentMemoClientId].unshift({ id: Date.now(), text, level: 'normal' });
+    input.value = '';
+    localStorage.setItem('memos', JSON.stringify(memos));
+    renderMemoList();
+}
+
+function toggleMemoLevel(id) {
+    const list = memos[currentMemoClientId] || [];
+    const memo = list.find(m => String(m.id) === String(id));
+    if (memo) { memo.level = memo.level === 'important' ? 'normal' : 'important'; }
+    localStorage.setItem('memos', JSON.stringify(memos));
+    renderMemoList();
+}
+
+function deleteMemo(id) {
+    const list = memos[currentMemoClientId] || [];
+    memos[currentMemoClientId] = list.filter(m => String(m.id) !== String(id));
+    localStorage.setItem('memos', JSON.stringify(memos));
+    renderMemoList();
+}
+
+function filterMemo(level) {
+    memoFilter = level;
+    ['All','Important','Normal'].forEach(n => {
+        const el = document.getElementById('memoFilter' + n);
+        if (el) { el.style.opacity = (n.toLowerCase() === level || (n==='All' && level==='all')) ? '1' : '0.5'; }
+    });
+    renderMemoList();
 }
 
 // ========== 清单文件功能 ==========
