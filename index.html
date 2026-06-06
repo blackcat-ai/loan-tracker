@@ -34,8 +34,9 @@
         }
 
         .page {
-            width: 25vw;
+            width: 25%;
             height: 100vh;
+            min-height: 100vh;
             overflow-y: auto;
             padding: 10px;
             padding-bottom: 80px;
@@ -1450,7 +1451,22 @@ function escHtml(str) {
 
 // ========== 自动保存 & 启动 ==========
 setInterval(() => { if (hasUnsavedChanges) saveProgress(); }, 30000);
-window.onload = init;
+window.onload = function() {
+    // PWA全屏模式修复：强制设置每页宽度为视口宽度
+    const pages = document.querySelectorAll('.page');
+    const wrapper = document.getElementById('pagesWrapper');
+    const vw = window.innerWidth;
+    if (wrapper && pages.length > 0) {
+        wrapper.style.width = (vw * pages.length) + 'px';
+        pages.forEach(p => { p.style.width = vw + 'px'; });
+        window.addEventListener('resize', () => {
+            const w = window.innerWidth;
+            wrapper.style.width = (w * pages.length) + 'px';
+            pages.forEach(p => { p.style.width = w + 'px'; });
+        });
+    }
+    init();
+};
 
 // 回车键添加客户
 document.addEventListener('keydown', function(e) {
