@@ -1359,6 +1359,50 @@ document.addEventListener('keydown', function(e) {
         addClient();
     }
 });
+
+// ========== 版本更新检测 ==========
+const CURRENT_VERSION = '__VER_' + Date.now() + '_';
+const VER_CHECK_INTERVAL = 30 * 60 * 1000; // 30分钟检测一次
+
+// 首次加载记录版本
+localStorage.setItem('app_version', CURRENT_VERSION);
+
+function checkForUpdate() {
+    fetch(window.location.href, { cache: 'no-cache', headers: { 'Cache-Control': 'no-cache' } })
+        .then(resp => resp.text())
+        .then(html => {
+            const match = html.match(/__VER_(\d+)_/);
+            if (match && match[1] !== CURRENT_VERSION.replace(/__VER_(\d+)_/, '$1')) {
+                showUpdateNotification();
+            }
+        })
+        .catch(() => {});
+}
+
+function showUpdateNotification() {
+    // 如果已存在则不重复
+    if (document.getElementById('updateBanner')) return;
+    
+    const banner = document.createElement('div');
+    banner.id = 'updateBanner';
+    banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:linear-gradient(90deg,#4caf50,#66bb6a);color:white;text-align:center;padding:14px 20px;font-size:15px;font-weight:600;box-shadow:0 2px 10px rgba(0,0,0,0.2);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;';
+    banner.innerHTML = '<span>🎉 发现新版本！</span><span style="background:white;color:#4caf50;padding:4px 14px;border-radius:20px;font-size:13px;">点击更新</span>';
+    banner.onclick = function() {
+        // 保存当前数据
+        saveAll();
+        // 强制刷新
+        window.location.reload(true);
+    };
+    document.body.appendChild(banner);
+    
+    // 把页面内容往下推
+    document.querySelector('.pages-wrapper').style.marginTop = '48px';
+}
+
+// 定时检测
+setInterval(checkForUpdate, VER_CHECK_INTERVAL);
+// 首次打开5秒后检测一次
+setTimeout(checkForUpdate, 5000);
 </script>
 </body>
 </html>
