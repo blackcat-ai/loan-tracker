@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>贷款流程进度跟踪</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 10px;
+            min-height: 100vh;
+            padding-bottom: 80px;
+        }
+        
+        .container { max-width: 800px; margin: 0 auto; }
+
+        /* ===== 客户选择器 ===== */
+        .client-bar {
+            background: white;
+            padding: 14px 18px;
+            border-radius: 15px;
+            margin-bottom: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .client-selector {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .client-selector label {
+            font-weight: 600;
+            color: #333;
+            font-size: 15px;
+            white-space: nowrap;
+        }
+
+        .client-selector select {
+            flex: 1;
+            min-width: 140px;
+            padding: 9px 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 15px;
+            color: #333;
+            background: #fafafa;
+            cursor: pointer;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .client-selector select:focus { border-color: #667eea; background: #fff; }
+
+        .btn-sm {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .btn-add { background: #4caf50; color: white; }
+        .btn-add:hover { background: #43a047; transform: translateY(-1px); }
+        
+        .btn-mgmt { background: #ff9800; color: white; }
+        .btn-mgmt:hover { background: #f57c00; transform: translateY(-1px); }
+
+        /* ===== 头部统计 ===== */
+        .header {
+            background: white;
+            padding: 18px 20px;
+            border-radius: 15px;
+            margin-bottom: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            color: #667eea;
+            font-size: 22px;
+            margin-bottom: 12px;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #e0e0e0;
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            transition: width 0.3s ease;
+            min-width: fit-content;
+            font-size: 13px;
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #e0e0e0;
+        }
+        
+        .stat-item { text-align: center; }
+        .stat-number { font-size: 26px; font-weight: bold; color: #667eea; }
+        .stat-label { font-size: 12px; color: #666; margin-top: 4px; }
+
+        .reset-btn {
+            background: #ff5252;
+            color: white;
+            border: none;
+            padding: 9px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 10px;
+            width: 100%;
+            font-size: 14px;
+        }
+        .reset-btn:hover { background: #ff3333; }
+
+        /* ===== 阶段 ===== */
+        .section {
+            background: white;
+            margin-bottom: 12px;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .section-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 14px 18px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+        }
+        
+        .section-header h2 { font-size: 18px; margin: 0; }
+        .section-progress { font-size: 13px; opacity: 0.9; }
+        
+        .section-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease;
+        }
+        .section-content.expanded { max-height: 10000px; }
+
+        /* ===== 业务环节 ===== */
+        .phase { border-bottom: 1px solid #eee; }
+        .phase:last-child { border-bottom: none; }
+        
+        .phase-header {
+            background: #f8f9fa;
+            padding: 11px 16px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 4px solid #667eea;
+            margin: 8px 12px;
+            border-radius: 8px;
+            user-select: none;
+        }
+        .phase-header:hover { background: #f0f0f5; }
+        .phase-header h3 { font-size: 15px; color: #333; margin: 0; font-weight: 600; }
+        .phase-progress { font-size: 12px; color: #888; }
+        
+        .phase-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease;
+        }
+        .phase-content.expanded { max-height: 10000px; }
+
+        /* ===== 步骤 & 任务 ===== */
+        .step { padding: 10px 16px; border-bottom: 1px solid #f5f5f5; }
+        .step:last-child { border-bottom: none; }
+        
+        .step-title {
+            font-weight: 600;
+            color: #555;
+            margin-bottom: 8px;
+            font-size: 14px;
+            padding-left: 8px;
+            border-left: 3px solid #bbb;
+        }
+        
+        .task-item {
+            display: flex;
+            align-items: flex-start;
+            padding: 5px 5px 5px 12px;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: background 0.15s;
+        }
+        .task-item:hover { background: #fafafa; }
+        
+        .task-item input[type="checkbox"] {
+            margin-right: 9px;
+            margin-top: 3px;
+            width: 17px;
+            height: 17px;
+            cursor: pointer;
+            accent-color: #667eea;
+            flex-shrink: 0;
+        }
+        
+        .task-item label {
+            flex: 1;
+            cursor: pointer;
+            line-height: 1.55;
+            color: #444;
+            font-size: 13px;
+            word-break: break-word;
+        }
+        .task-item.completed label { text-decoration: line-through; color: #aaa; }
+
+        /* ===== 保存按钮 ===== */
+        .save-btn {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 13px 26px;
+            border-radius: 50px;
+            font-size: 15px;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            cursor: pointer;
+            z-index: 999;
+            display: none;
+        }
+        .save-btn.show { display: block; animation: popIn 0.3s ease; }
+
+        @keyframes popIn {
+            from { opacity: 0; transform: scale(0.8) translateY(10px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        .arrow { transition: transform 0.3s; display: inline-block; margin-right: 6px; font-size: 13px; }
+        .expanded > .arrow { transform: rotate(90deg); }
+
+        /* ===== 弹窗 ===== */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .modal-overlay.show { display: flex; }
+
+        .modal {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            width: 100%;
+            max-width: 420px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+
+        .modal h2 {
+            font-size: 20px;
+            color: #333;
+            margin-bottom: 16px;
+        }
+
+        .modal input[type="text"] {
+            width: 100%;
+            padding: 11px 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 15px;
+            outline: none;
+            margin-bottom: 14px;
+        }
+        .modal input[type="text"]:focus { border-color: #667eea; }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 4px;
+        }
+        .modal-actions button {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .btn-confirm { background: #667eea; color: white; }
+        .btn-cancel { background: #e0e0e0; color: #333; }
+
+        /* ===== 客户列表项 ===== */
+        .client-list-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 14px;
+            border: 1px solid #eee;
+            border-radius: 10px;
+            margin-bottom: 8px;
+        }
+        .client-list-item:last-child { margin-bottom: 0; }
+
+        .client-info { flex: 1; }
+        .client-info-name { font-weight: 600; font-size: 15px; color: #333; }
+        .client-info-detail { font-size: 12px; color: #888; margin-top: 2px; }
+
+        .btn-del {
+            background: #ffebee;
+            color: #d32f2f;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .btn-del:hover { background: #ffcdd2; }
+
+        .empty-tip {
+            text-align: center;
+            color: #999;
+            padding: 30px 0;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <!-- 客户选择器 -->
+        <div class="client-bar">
+            <div class="client-selector">
+                <label>👤 客户:</label>
+                <select id="clientSelect" onchange="switchClient(this.value)"></select>
+                <button class="btn-sm btn-add" onclick="showAddClient()">+ 新增</button>
+                <button class="btn-sm btn-mgmt" onclick="showMgmtModal()">管理</button>
+            </div>
+        </div>
+
+        <!-- 统计头部 -->
+        <div class="header">
+            <h1 id="headerTitle">📊 贷款流程进度跟踪</h1>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill">0%</div>
+            </div>
+            <div class="stats">
+                <div class="stat-item"><div class="stat-number" id="completedCount">0</div><div class="stat-label">已完成</div></div>
+                <div class="stat-item"><div class="stat-number" id="totalCount">0</div><div class="stat-label">总任务</div></div>
+                <div class="stat-item"><div class="stat-number" id="progressPercent">0%</div><div class="stat-label">完成率</div></div>
+            </div>
+            <button class="reset-btn" onclick="resetCurrentClient()">🔄 重置当前客户进度</button>
+        </div>
+
+        <!-- 流程内容 -->
+        <div id="sectionsContainer"></div>
+
+    </div>
+
+    <!-- 新增客户弹窗 -->
+    <div class="modal-overlay" id="addModal">
+        <div class="modal">
+            <h2>➕ 新增客户</h2>
+            <input type="text" id="newClientName" placeholder="请输入客户名称（如：张三公司）" maxlength="30">
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="hideAddModal()">取消</button>
+                <button class="btn-confirm" onclick="addClient()">确认添加</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 管理客户弹窗 -->
+    <div class="modal-overlay" id="mgmtModal">
+        <div class="modal">
+            <h2>👥 客户管理</h2>
+            <div id="clientList"></div>
+            <div style="margin-top:16px;text-align:center;">
+                <button class="btn-sm btn-cancel" onclick="hideMgmtModal()" style="width:auto;padding:10px 30px;">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <button class="save-btn" id="saveBtn" onclick="saveProgress()">💾 已更新，点击保存</button>
+
+<script>
+// ========== 贷款流程数据 ==========
+const loanProcessData = [
+    {
+        name: "贷前",
+        phases: [
+            {
+                name: "资料审核",
+                categories: [
+                    { name: "申请表类", tasks: ["申请表","股东会决议","签字样本","贷款资金用途承诺书及阳光信贷卡","个人征信授权书","企业征信授权书","借款人婚姻状况承诺书（客户单身用）","抵押人谈话记录(抵押时用)","抵（质）押人声明","出租承租情况声明"] },
+                    { name: "客户资料", tasks: ["营业执照正本","营业执照副本","开户许可证","公司章程","租赁合同","高新证（如有）","特殊行业许可证（如有）","排污登记回执（如有）","实控人身份证","实控人配偶身份证","法人代表身份证","法人代表配偶身份证","股东身份证","婚姻证明","房产证（做为抵押或资产证明）","近1年银行流水（PDF版）","近24个月增值税申报表（共24张，首页）","近2年所得税申报表（共8张，首页）","近2年完税证明、最近一期完税证明（共3张）","近2年财务报表、最近一期财务报表（共3份）","近12个月电费单据","近12个月工资表","应收台账","应付台账","库存表","设备清单+设备或合同","社会保险费申报汇总表"] }
+                ]
+            },
+            {
+                name: "调查",
+                categories: [
+                    { name: "征信查询", tasks: ["资金流授权","整理开户相关照片及征信查询相关照片","录CRM信息","录自然人信息","系统申请资金流查询","整理征信查询资料","系统申请征信查询","征信结果查阅及摘抄"] },
+                    { name: "现场资料拍照", tasks: ["近3个月供应商对账单、送货单、合同","近3个月客户对账单、送货单、合同"] },
+                    { name: "其他事项", tasks: ["定位打卡","补完资料","签字盖章","发票授权","现场拍照、与实控人合影","了解企业经营情况及经营历史","了解上下游、收付款账期、应收应付金额","了解企业的用款计划","了解关联公司的相关情况"] }
+                ]
+            },
+            {
+                name: "报审",
+                categories: [
+                    { name: "整理数据", tasks: ["流水数据","征信数据","财报数据","电费、工资","资产","流动资金测算","上下游数据"] },
+                    { name: "写报告", tasks: ["系统评级及授信信息录入","写系统报告","报告发给肖柱忠"] },
+                    { name: "系统上报", tasks: ["写会商表","纸质资料整理","电子资料整理","系统上传照片","系统上报及领导批系统","写报审表"] }
+                ]
+            }
+        ]
+    },
+    {
+        name: "贷中",
+        phases: [
+            {
+                name: "反馈",
+                categories: [
+                    { name: "反馈事项", tasks: ["报加快审核流程","看具体的反馈内容，列出客户补充的资料","通知客户补资料","与审查沟通有疑问的问题","写反馈表","把反馈资料整理后发给审查","二次反馈","三次反馈","核对授信方案","查看系统流程是否完结"] }
+                ]
+            },
+            {
+                name: "签合同",
+                categories: [
+                    { name: "签约准备", tasks: ["下载批单","出系统合同","其他合同文本","抵押申请资料","通知客户带资料过来签合同","领导签字","用印","申请转账限额","申请优惠利率"] }
+                ]
+            },
+            {
+                name: "放款",
+                categories: [
+                    { name: "抵押登记", tasks: ["抵押资料给抵押岗","收到他项","系统录入抵押登记"] },
+                    { name: "E支用申请", tasks: ["E支用申请表","综合调查报告","受托支付证明材料：银行流水、购销合同、发票、采购单、框架协议等","批单","抵押物查档","征信（30天内的）","合同","报审台账","他项"] },
+                    { name: "放款审核", tasks: ["借款合同","保证合同","抵押合同","支用单","抵押物情况说明","他项","查册（2日内）","抵押人声明","正式评估报告（外评需要，内评去系统截图）","入库资料（电子入库截图，或纸质入库单）","房产现场（小微易贷提供）","房产证（小微易贷提供）","股东会决议（小微易贷提供）","出租承租人声明（小微易贷提供）"] }
+                ]
+            }
+        ]
+    },
+    {
+        name: "贷后回访",
+        phases: [
+            {
+                name: "后续工作",
+                categories: [
+                    { name: "贷后事项", tasks: ["现场合影","送合同","用途的合同","用途的发票","银行流水","营销转介绍"] }
+                ]
+            }
+        ]
+    }
+];
+
+// ========== 总任务数 ==========
+let TOTAL_TASKS = 0;
+loanProcessData.forEach(s => s.phases.forEach(p => p.categories.forEach(c => TOTAL_TASKS += c.tasks.length)));
+
+// ========== 状态 ==========
+let clients = {};          // { clientId: { name, created, progress: {...} } }
+let currentClientId = null;
+let hasUnsavedChanges = false;
+
+function tid(sIdx, pIdx, cIdx, tIdx) { return `${sIdx}-${pIdx}-${cIdx}-${tIdx}`; }
+
+// ========== 初始化 ==========
+function init() {
+    loadAll();
+    if (Object.keys(clients).length === 0) {
+        // 首次使用，创建示例客户
+        const demoId = 'client_' + Date.now();
+        clients[demoId] = { name: '示例客户', created: new Date().toLocaleDateString(), progress: {} };
+        currentClientId = demoId;
+        saveAll();
+    } else if (!currentClientId || !clients[currentClientId]) {
+        currentClientId = Object.keys(clients)[0];
+    }
+    renderClientSelect();
+    renderAll();
+    updateProgress();
+}
+
+// ========== 客户管理：增删改查 ==========
+function renderClientSelect() {
+    const sel = document.getElementById('clientSelect');
+    sel.innerHTML = '';
+    Object.keys(clients).forEach(id => {
+        const c = clients[id];
+        const opt = document.createElement('option');
+        opt.value = id;
+        opt.textContent = c.name + (id === currentClientId ? ' ✓' : '');
+        sel.appendChild(opt);
+    });
+    sel.value = currentClientId;
+
+    document.getElementById('headerTitle').textContent =
+        `📊 ${clients[currentClientId]?.name || ''} - 贷款流程进度`;
+}
+
+function switchClient(id) {
+    if (hasUnsavedChanges) saveProgress();
+    currentClientId = id;
+    renderClientSelect();
+    renderAll();
+    updateProgress();
+}
+
+function showAddClient() {
+    document.getElementById('addModal').classList.add('show');
+    document.getElementById('newClientName').value = '';
+    document.getElementById('newClientName').focus();
+}
+
+function hideAddModal() {
+    document.getElementById('addModal').classList.remove('show');
+}
+
+function addClient() {
+    const name = document.getElementById('newClientName').value.trim();
+    if (!name) { alert('请输入客户名称'); return; }
+    if (name.length > 30) { alert('客户名称不能超过30个字'); return; }
+    
+    const id = 'client_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+    clients[id] = { name: name, created: new Date().toLocaleDateString(), progress: {} };
+    currentClientId = id;
+    saveAll();
+    hideAddModal();
+    renderClientSelect();
+    renderAll();
+    updateProgress();
+}
+
+function showMgmtModal() {
+    const listEl = document.getElementById('clientList');
+    if (Object.keys(clients).length === 0) {
+        listEl.innerHTML = '<div class="empty-tip">暂无客户</div>';
+    } else {
+        let html = '';
+        Object.keys(clients).forEach(id => {
+            const c = clients[id];
+            const prog = c.progress || {};
+            let done = 0;
+            loanProcessData.forEach((s, si) =>
+                s.phases.forEach((p, pi) =>
+                    p.categories.forEach((ci, ciIdx) =>
+                        ci.tasks.forEach((_, ti) => {
+                            if (prog[tid(si, pi, ciIdx, ti)]) done++;
+                        })
+                    )
+                )
+            );
+            const pct = TOTAL_TASKS ? Math.round(done / TOTAL_TASKS * 100) : 0;
+            
+            html += `<div class="client-list-item">`;
+            html += `<div class="client-info">`;
+            html += `<div class="client-info-name">${escHtml(c.name)}${id === currentClientId ? ' ✅' : ''}</div>`;
+            html += `<div class="client-info-detail">创建于 ${c.created} · 进度 ${done}/${TOTAL_TASKS} (${pct}%)</div>`;
+            html += `</div>`;
+            html += `<button class="btn-del" onclick="deleteClient('${id}')">删除</button>`;
+            html += `</div>`;
+        });
+        listEl.innerHTML = html;
+    }
+    document.getElementById('mgmtModal').classList.add('show');
+}
+
+function hideMgmtModal() {
+    document.getElementById('mgmtModal').classList.remove('show');
+}
+
+function deleteClient(id) {
+    const c = clients[id];
+    if (!confirm(`确定要删除客户「${c.name}」吗？\n该客户的进度数据将被永久删除！`)) return;
+    
+    delete clients[id];
+    if (currentClientId === id) {
+        const remaining = Object.keys(clients);
+        currentClientId = remaining.length > 0 ? remaining[0] : null;
+    }
+    saveAll();
+    hideMgmtModal();
+    renderClientSelect();
+    renderAll();
+    updateProgress();
+}
+
+// ========== 渲染流程 ==========
+function renderAll() {
+    const container = document.getElementById('sectionsContainer');
+    container.innerHTML = '';
+
+    if (!currentClientId || !clients[currentClientId]) {
+        container.innerHTML = '<div class="empty-tip">请先添加一个客户</div>';
+        return;
+    }
+
+    loanProcessData.forEach((section, sIdx) => {
+        const sTotal = countSectionTasks(sIdx);
+        const sDone = countSectionDone(sIdx);
+
+        const el = document.createElement('div');
+        el.className = 'section';
+        el.id = `section-${sIdx}`;
+        el.innerHTML = `
+            <div class="section-header" onclick="toggleSection(${sIdx})">
+                <h2><span class="arrow">▶</span>${section.name}</h2>
+                <span class="section-progress">${sDone}/${sTotal} (${sTotal ? Math.round(sDone/sTotal*100) : 0}%)</span>
+            </div>
+            <div class="section-content" id="sc-${sIdx}">
+                ${renderPhases(sIdx)}
+            </div>
+        `;
+        container.appendChild(el);
+    });
+}
+
+function renderPhases(sIdx) {
+    const section = loanProcessData[sIdx];
+    let html = '';
+    section.phases.forEach((phase, pIdx) => {
+        const pTotal = countPhaseTasks(sIdx, pIdx);
+        const pDone = countPhaseDone(sIdx, pIdx);
+        html += `<div class="phase">`;
+        html += `<div class="phase-header" onclick="togglePhase(${sIdx}, ${pIdx})">`;
+        html += `<h3><span class="arrow">▶</span>${phase.name}</h3>`;
+        html += `<span class="phase-progress">${pDone}/${pTotal} (${pTotal ? Math.round(pDone/pTotal*100) : 0}%)</span>`;
+        html += `</div>`;
+        html += `<div class="phase-content" id="pc-${sIdx}-${pIdx}">`;
+        html += renderCategories(sIdx, pIdx);
+        html += `</div></div>`;
+    });
+    return html;
+}
+
+function renderCategories(sIdx, pIdx) {
+    const phase = loanProcessData[sIdx].phases[pIdx];
+    let html = '';
+    const prog = clients[currentClientId]?.progress || {};
+    phase.categories.forEach((cat, cIdx) => {
+        if (cat.tasks.length === 0) return;
+        html += `<div class="step"><div class="step-title">${cat.name}</div>`;
+        cat.tasks.forEach((task, tIdx) => {
+            const t = tid(sIdx, pIdx, cIdx, tIdx);
+            const done = !!prog[t];
+            html += `<div class="task-item ${done ? 'completed' : ''}" onclick="toggleTask('${t}')">`;
+            html += `<input type="checkbox" id="${t}" ${done ? 'checked' : ''} onchange="event.stopPropagation()">`;
+            html += `<label for="${t}">${task}</label></div>`;
+        });
+        html += `</div>`;
+    });
+    return html;
+}
+
+// ========== 折叠/展开 ==========
+function toggleSection(sIdx) {
+    document.getElementById(`sc-${sIdx}`).classList.toggle('expanded');
+}
+function togglePhase(sIdx, pIdx) {
+    document.getElementById(`pc-${sIdx}-${pIdx}`).classList.toggle('expanded');
+}
+
+// ========== 任务操作 ==========
+function toggleTask(t) {
+    if (!clients[currentClientId]) return;
+    if (!clients[currentClientId].progress) clients[currentClientId].progress = {};
+    clients[currentClientId].progress[t] = !clients[currentClientId].progress[t];
+    hasUnsavedChanges = true;
+
+    const cb = document.getElementById(t);
+    const item = cb.closest('.task-item');
+    if (clients[currentClientId].progress[t]) {
+        item.classList.add('completed'); cb.checked = true;
+    } else {
+        item.classList.remove('completed'); cb.checked = false;
+    }
+    updateProgress();
+    showSaveBtn();
+}
+
+// ========== 计数 ==========
+function countSectionTasks(sIdx) {
+    let n = 0;
+    loanProcessData[sIdx].phases.forEach(p => p.categories.forEach(c => n += c.tasks.length));
+    return n;
+}
+function countSectionDone(sIdx) {
+    let n = 0;
+    const prog = clients[currentClientId]?.progress || {};
+    loanProcessData[sIdx].phases.forEach((p, pi) =>
+        p.categories.forEach((c, ci) =>
+            c.tasks.forEach((_, ti) => { if (prog[tid(sIdx, pi, ci, ti)]) n++; })
+        )
+    );
+    return n;
+}
+function countPhaseTasks(sIdx, pIdx) {
+    let n = 0;
+    loanProcessData[sIdx].phases[pIdx].categories.forEach(c => n += c.tasks.length);
+    return n;
+}
+function countPhaseDone(sIdx, pIdx) {
+    let n = 0;
+    const prog = clients[currentClientId]?.progress || {};
+    loanProcessData[sIdx].phases[pIdx].categories.forEach((c, ci) =>
+        c.tasks.forEach((_, ti) => { if (prog[tid(sIdx, pIdx, ci, ti)]) n++; })
+    );
+    return n;
+}
+
+// ========== 进度更新 ==========
+function updateProgress() {
+    let total = 0, done = 0;
+    loanProcessData.forEach((_, sIdx) => {
+        total += countSectionTasks(sIdx);
+        done += countSectionDone(sIdx);
+    });
+    const pct = total ? Math.round(done / total * 100) : 0;
+
+    document.getElementById('progressFill').style.width = pct + '%';
+    document.getElementById('progressFill').textContent = pct + '%';
+    document.getElementById('completedCount').textContent = done;
+    document.getElementById('totalCount').textContent = total;
+    document.getElementById('progressPercent').textContent = pct + '%';
+
+    loanProcessData.forEach((sec, sIdx) => {
+        const st = countSectionTasks(sIdx), sd = countSectionDone(sIdx);
+        const sp = document.querySelector(`#section-${sIdx} .section-progress`);
+        if (sp) sp.textContent = `${sd}/${st} (${st ? Math.round(sd/st*100) : 0}%)`;
+
+        sec.phases.forEach((_, pIdx) => {
+            const pt = countPhaseTasks(sIdx, pIdx), pd = countPhaseDone(sIdx, pIdx);
+            const pContent = document.getElementById(`pc-${sIdx}-${pIdx}`);
+            if (pContent) {
+                const pp = pContent.closest('.phase')?.querySelector('.phase-progress');
+                if (pp) pp.textContent = `${pd}/${pt} (${pt ? Math.round(pd/pt*100) : 0}%)`;
+            }
+        });
+    });
+}
+
+// ========== 保存/加载 ==========
+function showSaveBtn() {
+    const btn = document.getElementById('saveBtn');
+    btn.classList.remove('show');
+    void btn.offsetWidth;
+    btn.classList.add('show');
+}
+
+function saveProgress() {
+    saveAll();
+    hasUnsavedChanges = false;
+    const btn = document.getElementById('saveBtn');
+    btn.textContent = '✅ 已保存';
+    setTimeout(() => { btn.textContent = '💾 已更新，点击保存'; }, 1500);
+}
+
+function saveAll() {
+    localStorage.setItem('loanClients_v3', JSON.stringify({ clients, currentClientId }));
+}
+
+function loadAll() {
+    try {
+        const raw = localStorage.getItem('loanClients_v3');
+        if (raw) {
+            const data = JSON.parse(raw);
+            clients = data.clients || {};
+            currentClientId = data.currentClientId || null;
+        }
+    } catch(e) {}
+}
+
+function resetCurrentClient() {
+    if (!currentClientId || !clients[currentClientId]) return;
+    if (!confirm(`确定要重置「${clients[currentClientId].name}」的所有进度吗？`)) return;
+    clients[currentClientId].progress = {};
+    saveAll();
+    renderAll();
+    updateProgress();
+}
+
+// ========== 工具函数 ==========
+function escHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+// ========== 自动保存 & 启动 ==========
+setInterval(() => { if (hasUnsavedChanges) saveProgress(); }, 30000);
+window.onload = init;
+
+// 回车键添加客户
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && document.getElementById('addModal').classList.contains('show')) {
+        addClient();
+    }
+});
+</script>
+</body>
+</html>
