@@ -1313,7 +1313,7 @@ function deleteTodo(index) {
 }
 
 // ========== 备忘录功能 ==========
-let memos = JSON.parse(localStorage.getItem('memos') || '[]');
+let memos = JSON.parse(localStorage.getItem('memos') || '{}');
 let memoFilter = 'all';
 
 function renderMemoList() {
@@ -1439,6 +1439,7 @@ function loadAll() {
             currentClientId = data.currentClientId || null;
             todos = data.todos || {};
         }
+        if (data.memos) memos = data.memos;
     } catch(e) {}
 }
 
